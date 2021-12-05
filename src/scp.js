@@ -4,8 +4,8 @@ const lzma = require('lzma-native');
 
 const processFlags = (flags, compressedBytes, uncompressedSizeBytes, calculatedHash) => {
   if ((flags & 0x100) !== 0) {
-    // section is chacha20 encrypted
-    throw Error('Unsupported flag: CHACHA20');
+    // section is SALSA20-encrypted
+    throw Error('Unsupported flag: SALSA20');
   }
 
   if ((flags & 0x10) !== 0) {
