@@ -4,8 +4,8 @@ const lzma = require('lzma-native');
 
 const processFlags = (flags, compressedBytes, uncompressedSizeBytes, calculatedHash) => {
   if ((flags & 0x100) !== 0) {
-    // section is SALSA20-encrypted
-    throw Error('Unsupported flag: SALSA20');
+    // section is XSALSA20-encrypted
+    throw Error('Unsupported flag: XSALSA20');
   }
 
   if ((flags & 0x10) !== 0) {
@@ -20,7 +20,7 @@ const processFlags = (flags, compressedBytes, uncompressedSizeBytes, calculatedH
       ...uncompressedSizeBytes, // lzma uncompressed size
       ...compressedBytes.slice(5), // compressed data
     ];
-    
+
     return lzma.decompress(compressedData);
   }
 
@@ -36,7 +36,7 @@ const unpack = async (fileToUnpack) => {
     throw Error(`Invalid SCP file. Wrong header. Magic: ${magic}. Version: ${version}`);
   }
 
-  // These flags are used in CHACHA20 (probably key and nonce):
+  // These flags are used in XSALSA20 (probably key):
   // 0x28 = ?
   // 0x30 = ?
   // 0x38 = ?
