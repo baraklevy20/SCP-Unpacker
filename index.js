@@ -11,6 +11,8 @@ const main = async () => {
 
   const promises = [];
   const filesToExtract = !argv.file ? [] : (Array.isArray(argv.file) ? argv.file : [argv.file]);
+  const keys = !argv.key ? [] : (Array.isArray(argv.key) ? argv.key : [argv.key]);
+  const nonces = !argv.nonce ? [] : (Array.isArray(argv.nonce) ? argv.nonce : [argv.nonce]);
   const folders = !argv.folder ? [] : (Array.isArray(argv.folder) ? argv.folder : [argv.folder]);
 
   folders.forEach((folder) => {
@@ -24,10 +26,10 @@ const main = async () => {
     fs.rmSync('out', { recursive: true });
   }
 
-  filesToExtract.forEach((scFile) => {
+  filesToExtract.forEach((scFile, i) => {
     const lastSlash = scFile.lastIndexOf('/');
     fs.mkdirSync(`out/${scFile.substring(0, lastSlash)}/${scFile.substring(lastSlash + 1)}`, { recursive: true });
-    promises.push(unpack(scFile));
+    promises.push(unpack(scFile, keys[i], nonces[i]));
   });
 
   const results = await Promise.allSettled(promises);

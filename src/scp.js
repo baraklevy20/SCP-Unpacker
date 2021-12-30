@@ -1,33 +1,58 @@
 const fs = require('fs');
 const sha256 = require('js-sha256');
 const lzma = require('lzma-native');
+const xsalsa20 = require('./xsalsa20');
 
-const processFlags = (flags, compressedBytes, uncompressedSizeBytes, calculatedHash) => {
-  if ((flags & 0x100) !== 0) {
-    // section is XSALSA20-encrypted
-    throw Error('Unsupported flag: XSALSA20');
+function hexToBytes(hex) {
+  const bytes = [];
+  for (let c = 0; c < hex.length; c += 2) {
+    bytes.push(parseInt(hex.substr(c, 2), 16));
   }
 
+  return bytes;
+}
+
+const processFlags = (
+  key,
+  nonce,
+  buffer,
+  flags,
+  compressedBytes,
+  uncompressedSizeBytes,
+  calculatedHash,
+) => {
+  let uncompressedBytes = compressedBytes;
+  if ((flags & 0x100) !== 0) {
+    const keyBytes = new Uint8Array(hexToBytes(key));
+    const nonceBytes = new Uint8Array(hexToBytes(nonce));
+    const keyNonce = [...keyBytes, ...nonceBytes];
+    const keyAndNonceSha = buffer.toString('hex', 0x28, 0x28 + 32);
+    if (sha256(keyNonce) !== keyAndNonceSha) {
+      throw Error('Wrong key and nonce. Can\'t unpack the file.');
+    }
+
+    uncompressedBytes = Buffer.from(xsalsa20.salsaDecrypt(nonceBytes, keyBytes, compressedBytes));
+  }
   if ((flags & 0x10) !== 0) {
-    if (calculatedHash !== sha256(compressedBytes)) {
+    if (calculatedHash !== sha256(uncompressedBytes)) {
       throw Error('Invalid sha256');
     }
   }
 
   if ((flags & 1) !== 0) {
     const compressedData = [
-      ...compressedBytes.slice(0, 5), // lzma props
+      ...uncompressedBytes.slice(0, 5), // lzma props
       ...uncompressedSizeBytes, // lzma uncompressed size
-      ...compressedBytes.slice(5), // compressed data
+      ...uncompressedBytes.slice(5), // compressed data
     ];
 
     return lzma.decompress(compressedData);
   }
 
-  return compressedBytes;
+  return uncompressedBytes;
 };
 
-const unpack = async (fileToUnpack) => {
+const unpack = async (fileToUnpack, key, nonce) => {
   const buffer = fs.readFileSync(fileToUnpack);
   const magic = buffer.toString('utf-8', 0, 4);
   const version = buffer.readUInt16LE(4);
@@ -36,20 +61,19 @@ const unpack = async (fileToUnpack) => {
     throw Error(`Invalid SCP file. Wrong header. Magic: ${magic}. Version: ${version}`);
   }
 
-  // These flags are used in XSALSA20 (probably key):
-  // 0x28 = ?
-  // 0x30 = ?
-  // 0x38 = ?
-  // 0x40 = ?
-  // All other bytes are known and used in the app
-
   const directoryOffset = Number(buffer.readBigUInt64LE(0x10));
   const uncompressedDirectorySizeBytes = buffer.subarray(0x18, 0x18 + 8);
-  const directoryLength = Number(buffer.readBigUInt64LE(0x20));
-  const compressedDirectory = buffer.subarray(directoryOffset, directoryOffset + directoryLength);
+  const directoryCompressedSize = Number(buffer.readBigUInt64LE(0x20));
+  const compressedDirectory = buffer.subarray(
+    directoryOffset,
+    directoryOffset + directoryCompressedSize,
+  );
   const directoryFlags = buffer.readUInt32LE(0x08);
 
   const directory = await processFlags(
+    key,
+    nonce,
+    buffer,
     directoryFlags,
     compressedDirectory,
     uncompressedDirectorySizeBytes,
@@ -75,6 +99,9 @@ const unpack = async (fileToUnpack) => {
     const fileFlags = fileHeader.readUInt16LE(0);
 
     promises.push(processFlags(
+      key,
+      nonce,
+      buffer,
       fileFlags,
       compressedFile,
       uncompressedFileSizeBytes,

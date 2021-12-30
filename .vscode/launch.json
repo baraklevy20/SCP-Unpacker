@@ -10,7 +10,20 @@
       "name": "Launch Program",
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}\\index.js",
-      "args": ["--folder", "assets"]
+      "args": [
+        "--file",
+        "assets/b1251112-900d-4a2e-85a1-a8e453d41e3b.sc",
+        "--key",
+        "25102949156047a7fe3bb46eca5a79c7ddafcaab7a41f1c55c25c2e20a1c9580",
+        "--nonce",
+        "25c58f4c7ec1186a5b5f8ec0ca5809b152820bfe79c64617",
+        "--file",
+        "assets/6fdfff27-71e0-4353-8aec-9807d88f5b70.png",
+        "--key",
+        "aafe26af424d198d7f43ce1812edfa7b04508541e63194d00f8720c0399d40e3",
+        "--nonce",
+        "bbd7a9995408aa9e43247ff539ef623fbbca1811154d1dd2"
+      ]
     }
   ]
 }

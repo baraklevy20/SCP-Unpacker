@@ -15,3 +15,7 @@ Extract a list of files - `node index.js --file assets/font.osm --file assets/ui
 Extract a directory - `node index.js --folder assets`
 
 You can also combine them - `node index.js --folder assets --file assets2/font.osm`
+
+Some files are using xsalsa20 encryption. To unpack them, you must provide a key and a nonce.
+You can then extract the encrypted scp file using:
+`node index.js --file assets/encrypted.scp --key [key] --nonce [nonce]` where `[key]` is a string of 32 hex bytes and `[nonce]` is a string of 24 hex bytes.
